@@ -1,0 +1,1170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Desarrollo de Plugins de WordPress</title>
+    <link href="prism.css"  rel="stylesheet" />
+</head>
+<body>
+
+<div class="contenedor">
+
+<li>Header de un Plugin</li>
+<pre class="language-css">
+   <code class="language-css">
+&lt;?php
+/*
+Plugin Name:  Quiz Book
+Plugin URI:
+Description:  Plugin para añadir Quizes o Cuestionarios con opción múltiple
+Version:      1.0
+Author:       Juan Pablo De la torre
+Author URI:
+License:      GPL2
+License URI:  https://www.gnu.org/licenses/gpl-2.0.html
+Text Domain:  quizbook
+*/
+   </code>
+</pre>
+
+
+<li>Añadiendo un Custom Post Type</li>
+<pre class="language-php">
+   <code class="language-php">
+function post_type() {
+    $labels = array(
+        'name'                  => _x( 'Quiz', 'Post type general name', 'quizbook' ),
+        'singular_name'         => _x( 'Quiz', 'Post type singular name', 'quizbook' ),
+        'menu_name'             => _x( 'Quizes', 'Admin Menu text', 'quizbook' ),
+        'name_admin_bar'        => _x( 'Quiz', 'Add New on Toolbar', 'quizbook' ),
+        'add_new'               => __( 'Add New', 'quizbook' ),
+        'add_new_item'          => __( 'Add New Quiz', 'quizbook' ),
+        'new_item'              => __( 'New Quiz', 'quizbook' ),
+        'edit_item'             => __( 'Editar Quiz', 'quizbook' ),
+        'view_item'             => __( 'Ver Quiz', 'quizbook' ),
+        'all_items'             => __( 'Todos Quizes', 'quizbook' ),
+        'search_items'          => __( 'Buscar Quizes', 'quizbook' ),
+        'parent_item_colon'     => __( 'Padre Quizes:', 'quizbook' ),
+        'not_found'             => __( 'No encontrados.', 'quizbook' ),
+        'not_found_in_trash'    => __( 'No encontrados.', 'quizbook' ),
+        'featured_image'        => _x( 'Imagen Destacada', '', 'quizbook' ),
+        'set_featured_image'    => _x( 'Añadir imagen destacada', '', 'quizbook' ),
+        'remove_featured_image' => _x( 'Borrar imagen', '', 'quizbook' ),
+        'use_featured_image'    => _x( 'Usar como imagen', '', 'quizbook' ),
+        'archives'              => _x( 'Quizes Archivo', '', 'quizbook' ),
+        'insert_into_item'      => _x( 'Insertar en Quiz', '', 'quizbook' ),
+        'uploaded_to_this_item' => _x( 'Cargado en este Quiz', '', 'quizbook' ),
+        'filter_items_list'     => _x( 'Filtrar Quizes por lista', '”. Added in 4.4', 'quizbook' ),
+        'items_list_navigation' => _x( 'Navegación de Quizes', '', 'quizbook' ),
+        'items_list'            => _x( 'Lista de Quizes', '', 'quizbook' ),
+    );
+
+    $args = array(
+        'labels'             => $labels,
+        'public'             => true,
+        'publicly_queryable' => true,
+        'show_ui'            => true,
+        'show_in_menu'       => true,
+        'query_var'          => true,
+        'rewrite'            => array( 'slug' => 'quizes' ),
+        'capability_type'    => 'post',
+        'menu_position'      => 6,
+        'menu_icon'          => 'dashicons-welcome-learn-more',
+        'has_archive'        => true,
+        'hierarchical'       => false,
+        'supports'           => array( 'title', 'editor'),
+    );
+
+    register_post_type( 'quizes', $args );
+}
+
+add_action( 'init', 'post_type' );
+
+   </code>
+</pre>
+
+
+<li>Incluyendo distintos archivos</li>
+<pre class="language-php">
+   <code class="language-php">
+/*
+ * Registrar Post Types
+ */
+require_once plugin_dir_path(__FILE__) . 'includes/posttypes.php';
+   </code>
+</pre>
+
+<li>Hooks de Activación</li>
+<pre class="language-php">
+   <code class="language-php">
+
+// En posttype.php
+/**
+ * Flush rewrite rules on activation.
+ */
+function rewrite_flush() {
+	post_type();
+	flush_rewrite_rules();
+}
+
+// En quizbook.php
+
+register_activation_hook(__FILE__, 'rewrite_flush');
+
+   </code>
+</pre>
+
+
+<li>Buenas Prácticas para Plugins</li>
+<pre class="language-php">
+   <code class="language-php">
+
+// Añade prefijos: quizbook_
+
+   </code>
+</pre>
+
+
+<li>Que son los Metaboxes</li>
+<pre class="language-php">
+   <code class="language-php">
+
+   </code>
+</pre>
+
+<li>Función para agregar Metaboxes</li>
+<pre class="language-php">
+   <code class="language-php">
+
+if ( ! defined( 'ABSPATH' ) ) exit;
+
+function quizbook_agregar_metaboxes(){
+  // Agrega el Metabox en el Post Type de Quizes
+  // 7 parametros:
+  // id para identificar el metabox
+  // Titulo del Metabox
+  // Callback con el Cntenido
+  // Pantalla donde se mostrará o Post Type
+  // contexto es donde se mostrará (normal, aside, advanced)
+  // Prioridad en la que se mostrarán
+  // Argumentos con callback
+  add_meta_box( 'quizbook_meta_box', 'Respuestas', 'quizbook_metaboxes', 'quizes', 'normal', 'high', null );
+}
+add_action( 'add_meta_boxes', 'quizbook_agregar_metaboxes' );
+
+
+   </code>
+</pre>
+
+<li>Diseño del Formulario</li>
+<pre class="language-php">
+   <code class="language-php">
+function quizbook_metaboxes() { ?>
+   &lt;table class="form-table">
+       &lt;tr>
+           &lt;th class="row-title" colspan="2">
+               &lt;h2>Añade las respuestas aquí&lt;/h2>
+           &lt;/th>
+       &lt;/tr>
+       &lt;tr>
+           &lt;th class="row-title">
+               &lt;label for="respuesta_a">a)&lt;/label>
+           &lt;/th>
+           &lt;td>
+               &lt;input id="respuesta_a" name="qb_respuesta_a" class="regular-text" type="text" >
+           &lt;/td>
+       &lt;/tr>
+       &lt;tr>
+           &lt;th class="row-title">
+               &lt;label for="respuesta_b">b)&lt;/label>
+           &lt;/th>
+           &lt;td>
+               &lt;input id="respuesta_b" name="qb_respuesta_b" class="regular-text" type="text">
+           &lt;/td>
+       &lt;/tr>
+       &lt;tr>
+           &lt;th class="row-title">
+               &lt;label id="respuesta_c">c)&lt;/label>
+           &lt;/th>
+           &lt;td>
+               &lt;input id="respuesta_c" name="qb_respuesta_c" class="regular-text" type="text">
+           &lt;/td>
+       &lt;/tr>
+       &lt;tr>
+           &lt;th class="row-title">
+               &lt;label id="respuesta_d">d)&lt;/label>
+           &lt;/th>
+           &lt;td>
+               &lt;input id="respuesta_d" name="qb_respuesta_d" class="regular-text" type="text">
+           &lt;/td>
+       &lt;/tr>
+       &lt;tr>
+           &lt;th class="row-title">
+               &lt;label id="respuesta_e">e)&lt;/label>
+           &lt;/th>
+           &lt;td>
+               &lt;input id="respuesta_e" name="qb_respuesta_e" class="regular-text" type="text">
+           &lt;/td>
+       &lt;/tr>
+       &lt;tr>
+           &lt;th class="row-title">
+               &lt;label for="respuesta_correcta">Respuesta Correcta&lt;/label>
+           &lt;/th>
+           &lt;td>
+               &lt;select name="quizbook_correcta" id="respuesta_correcta" class="postbox">
+                   &lt;option value="">Elige la respuesta correcta&lt;/option>
+                   &lt;option value="qb_correcta:a">a&lt;/option>
+                   &lt;option value="qb_correcta:b">b&lt;/option>
+                   &lt;option value="qb_correcta:c">c&lt;/option>
+                   &lt;option value="qb_correcta:d">d&lt;/option>
+                   &lt;option value="qb_correcta:e">e&lt;/option>
+               &lt;/select>
+           &lt;/td>
+       &lt;/tr>
+    &lt;/table>
+&lt;?php
+}
+   </code>
+</pre>
+
+<li>Guardar los datos</li>
+<pre class="language-php">
+   <code class="language-php">
+function quizbook_guardar_metaboxes($post_id, $post, $update) {
+
+     $respuesta_a = $respuesta_b = $respuesta_c = $respuesta_d = $respuesta_e = '';
+
+
+     if(isset( $_POST['qb_respuesta_a'] ) ) {
+       $respuesta_a = sanitize_text_field($_POST['qb_respuesta_a']);
+     }
+     update_post_meta($post_id, 'qb_respuesta_a', $respuesta_a );
+
+     if(isset($_POST['qb_respuesta_b'])) {
+       $respuesta_b = sanitize_text_field($_POST['qb_respuesta_b']);
+     }
+     update_post_meta($post_id, 'qb_respuesta_b', $respuesta_b );
+
+     if(isset($_POST['qb_respuesta_c'])) {
+       $respuesta_c = sanitize_text_field($_POST['qb_respuesta_c']);
+     }
+     update_post_meta($post_id, 'qb_respuesta_c', $respuesta_c );
+
+     if(isset($_POST['qb_respuesta_d'])) {
+       $respuesta_d = sanitize_text_field($_POST['qb_respuesta_d']);
+     }
+     update_post_meta($post_id, 'qb_respuesta_d', $respuesta_d );
+
+     if(isset($_POST['qb_respuesta_e'])) {
+       $respuesta_e = sanitize_text_field($_POST['qb_respuesta_e']);
+     }
+     update_post_meta($post_id, 'qb_respuesta_e', $respuesta_e );
+
+     if(isset($_POST['quizbook_correcta'])) {
+       $correcta = sanitize_text_field($_POST['quizbook_correcta']);
+     }
+     update_post_meta($post_id, 'quizbook_correcta', $correcta );
+}
+
+add_action('save_post', 'quizbook_guardar_metaboxes', 10, 3);
+   </code>
+</pre>
+
+<li>Nonces y seguridad</li>
+<pre class="language-php">
+   <code class="language-php">
+// Despues de declarar la fnción crear el nonce.
+function quizbook_metaboxes() {
+    wp_nonce_field(basename(__FILE__), 'quizbook_nonce');
+
+    ?>
+
+// Verificar el nonce antes de guardar:
+function quizbook_guardar_metaboxes($post_id, $post, $update) {
+  if(!isset($_POST['quizbook_nonce']) || !wp_verify_nonce( $_POST['quizbook_nonce'], basename(__FILE__)  ) )
+    return $post_id;
+
+  if(!current_user_can('edit_post', $post_id))
+    return $post_id;
+
+  if(defined("DOING_AUTOSAVE") && DOING_AUTOSAVE)
+    return $post_id;
+  ... Resto
+   </code>
+</pre>
+
+<li>Mostrar los campos al abrir el formulario</li>
+<pre class="language-php">
+   <code class="language-php">
+// pasar post
+function quizbook_metaboxes($post) {
+
+// Los inputs
+&lt;input id="respuesta_e" name="qb_respuesta_e" class="regular-text" type="text" value="&lt;?php echo esc_attr( get_post_meta($post->ID,'qb_respuesta_e', true ) ); ?>">
+
+// el Select
+&lt;td>
+    &lt;?php $respuesta = esc_attr( get_post_meta($post->ID, 'quizbook_correcta', true) ); ?>
+    &lt;select name="quizbook_correcta" id="respuesta_correcta" class="postbox">
+       &lt;option value="">Elige la respuesta correcta&lt;/option>
+       &lt;option value="qb_correcta:a" &lt;?php selected($respuesta, 'qb_correcta:a'); ?>>a&lt;/option>
+       &lt;option value="qb_correcta:b" &lt;?php selected($respuesta, 'qb_correcta:b'); ?>>b&lt;/option>
+       &lt;option value="qb_correcta:c" &lt;?php selected($respuesta, 'qb_correcta:c'); ?>>c&lt;/option>
+       &lt;option value="qb_correcta:d" &lt;?php selected($respuesta, 'qb_correcta:d'); ?>>d&lt;/option>
+       &lt;option value="qb_correcta:e" &lt;?php selected($respuesta, 'qb_correcta:e'); ?>>e&lt;/option>
+    &lt;/select>
+&lt;/td>
+   </code>
+</pre>
+
+<li>Registrando un nuevo rol</li>
+<pre class="language-php">
+   <code class="language-php">
+// crear roles.php
+
+/*
+ * Agrega Roles y Permisos a Quizbook
+ */
+require_once plugin_dir_path( __FILE__ ) . 'includes/roles.php';
+
+// En roles:
+
+&lt;?php
+/**
+ * Register Task Logger role.
+ */
+function quizbook_crear_role() {
+	add_role( 'quizbook', 'Quiz' );
+}
+
+function quizbook_remover_role() {
+	remove_role( 'quizbook', 'Quiz' );
+}
+
+// Ejecutar al Activar el Plugin.
+
+register_activation_hook( __FILE__, 'quizbook_crear_role' );
+register_deactivation_hook( __FILE__, 'quizbook_remover_role' );
+   </code>
+</pre>
+
+<li>Registrando un nuevo capability</li>
+<pre class="language-php">
+   <code class="language-php">
+// En el posttypes.php
+'capability_type'    => array('quiz', 'quizes'),
+'map_meta_cap'       => true,
+
+// en roles.php
+
+function quizbook_agregar_capabilities() {
+
+	$roles = array( 'administrator', 'editor', 'quizbook' );
+
+	foreach( $roles as $the_role ) {
+		$role = get_role( $the_role );
+		$role->add_cap( 'read' );
+		$role->add_cap( 'edit_quizes' );
+		$role->add_cap( 'publish_quizes' );
+		$role->add_cap( 'edit_published_quizes' );
+
+	}
+
+	$manager_roles = array( 'administrator', 'editor' );
+
+	foreach( $manager_roles as $the_role ) {
+		$role = get_role( $the_role );
+		$role->add_cap( 'read_private_quizes' );
+		$role->add_cap( 'edit_others_quizes' );
+		$role->add_cap( 'edit_private_quizes' );
+		$role->add_cap( 'delete_quizes' );
+		$role->add_cap( 'delete_published_quizes' );
+		$role->add_cap( 'delete_private_quizes' );
+		$role->add_cap( 'delete_others_quizes' );
+	}
+
+}
+
+function quizbook_remover_capabilities() {
+
+	$manager_roles = array( 'administrator', 'editor' );
+
+	foreach( $manager_roles as $the_role ) {
+		$role = get_role( $the_role );
+		$role->remove_cap( 'read' );
+		$role->remove_cap( 'edit_quizes' );
+		$role->remove_cap( 'publish_quizes' );
+		$role->remove_cap( 'edit_published_quizes' );
+		$role->remove_cap( 'read_private_quizes' );
+		$role->remove_cap( 'edit_others_quizes' );
+		$role->remove_cap( 'edit_private_quizes' );
+		$role->remove_cap( 'delete_quizes' );
+		$role->remove_cap( 'delete_published_quizes' );
+		$role->remove_cap( 'delete_private_quizes' );
+		$role->remove_cap( 'delete_others_quizes' );
+	}
+
+}
+
+// en el root del plugin:
+
+register_activation_hook( __FILE__, 'quizbook_agregar_capabilities' );
+register_deactivation_hook( __FILE__, 'quizbook_remover_capabilities' );
+
+// Crear un nuevo usuario
+
+$role->add_cap( 'edit_others_quizes' );
+   </code>
+</pre>
+
+<li>Utilizando Shortcode API</li>
+<pre class="language-php">
+   <code class="language-php">
+// en el root del plugin crear y enlazar shortcode.php
+
+/*
+ * Imprime un Shortcode
+ */
+require_once plugin_dir_path(__FILE__) . 'includes/shortcode.php';
+
+if ( ! defined( 'ABSPATH' ) ) exit;
+
+// Uso:  [quizbook]
+function quizbook_shortcode( $atts ) {
+    echo "Desde shortcode";
+}
+add_shortcode( 'quizbook', 'quizbook_shortcode' );
+   </code>
+</pre>
+
+<li>WP_Query dentro del Shortcode</li>
+<pre class="language-php">
+   <code class="language-php">
+$args = array(
+    'post_type' => 'quizes',
+);
+$quizbook = new WP_Query($args); ?>
+&lt;form name="quizbook_enviar" id="quizbook_enviar">
+    &lt;div id="quizbook" class="quizbook">
+        &lt;ul>
+        &lt;?php while($quizbook->have_posts()): $quizbook->the_post(); ?>
+            &lt;li data-pregunta="&lt;?php echo get_the_ID(); ?>">
+                &lt;h3>&lt;?php the_title(); ?>&lt;/h3>
+                &lt;?php the_content(); ?>
+            &lt;/li>
+
+        &lt;?php endwhile; ?>
+        &lt;/ul>
+    &lt;/div> &lt;!--#quizbook-->
+
+    &lt;input type="submit" value="Enviar" id="quizbook_btn_submit">
+
+    &lt;div id="quizbook_resultado">&lt;/div>
+&lt;/form>&lt;!--form-->
+&lt;?php wp_reset_postdata();
+   </code>
+</pre>
+
+<li>Finalizando la función</li>
+<pre class="language-php">
+   <code class="language-php">
+&lt;?php $opciones = get_post_meta(get_the_ID()  );
+
+        foreach($opciones as $key => $opcion):
+            $resultado = quizbook_filtrar_preguntas($key);
+            unset($resultado['qb_correcta']);
+            $numero = explode('_', $key);
+
+            if($resultado === 0) { ?>
+                 &lt;div id="&lt;?php echo get_the_ID() . ":" . $numero[2]; ?>" class=" respuesta ">
+                       &lt;?php echo $opcion[0]; ?>
+                &lt;/div>
+            &lt;?php }
+        endforeach;
+?>
+
+// Crear archivo de funciones genericas
+
+function quizbook_filtrar_preguntas($llave) {
+    return strpos($llave, 'qb_');
+}
+   </code>
+</pre>
+
+<li>Pasar argumentos al shortcode</li>
+<pre class="language-php">
+   <code class="language-php">
+// [quizbook preguntas="" orden=""]
+function quizbook_shortcode( $atts ) {
+    $args = array(
+        'posts_per_page' => $atts['preguntas'],
+        'orderby' =>  $atts['orden'],
+        'post_type' => 'quizes',
+    );
+   </code>
+</pre>
+
+
+<li>CSS en el Front End</li>
+<pre class="language-php">
+   <code class="language-php">
+function quizbook_frontend_styles(){
+    wp_enqueue_style('quizbookcss', plugins_url('../assets/css/quizbook.css', __FILE__) );
+
+}
+add_action('wp_enqueue_scripts', 'quizbook_frontend_styles');
+
+body {
+   color:red;
+}
+   </code>
+</pre>
+
+<li>CSS En el ADMIN</li>
+<pre class="language-php">
+   <code class="language-php">
+function quizbook_styles($hook) {
+
+    global $post;
+
+    if ( $hook == 'post-new.php' || $hook == 'post.php' ) {
+        if ( 'quizes' === $post->post_type ) {
+            wp_enqueue_style('quizbookcss', plugins_url('../assets/css/admin-quizbook.css', __FILE__));
+        }
+    }
+}
+add_action('admin_enqueue_scripts', 'quizbook_styles', 10, 1);
+   </code>
+</pre>
+
+
+<li>CSS En el ADMIN</li>
+<pre class="language-php">
+   <code class="language-php">
+wp_enqueue_script('quizbookjs', plugins_url('../assets/js/quizbook.js', __FILE__), array('jquery'), 1.0, true );
+
+(function($) {
+   console.log("Funciona!!");
+
+})(jQuery);
+   </code>
+</pre>
+
+<li>Escribiendo CSS para el FrontEnd</li>
+<pre class="language-css">
+   <code class="language-css">
+.quizbook {
+
+}
+.quizbook ul {
+    list-style: none;
+}
+.quizbook ul li {
+    padding: 30px;
+}
+.quizbook ul li h3 {
+
+}
+.quizbook ul li .respuesta {
+    padding: 20px;
+    border:1px solid #e1e1e1;
+    margin-bottom: 20px;
+}
+.quizbook ul li .respuesta:hover {
+    background-color: cornflowerblue;
+    color:white;
+    cursor: pointer;
+}
+   </code>
+</pre>
+
+<li>JavaScript para el front end</li>
+<pre class="language-js">
+   <code class="language-js">
+$('#quizbook ul li .respuesta').on('click', function() {
+    $(this).siblings().removeClass('seleccionada');
+    $(this).siblings().removeAttr('seleccionada', false);
+    $(this).addClass('seleccionada');
+    $(this).attr('seleccionada', true);
+});
+
+// en el css
+
+.quizbook ul li .respuesta.seleccionada
+   </code>
+</pre>
+
+<li>Enviando respuestas por Ajax</li>
+<pre class="language-js">
+   <code class="language-js">
+$('#quizbook_enviar').on('submit', function(e) {
+   e.preventDefault();
+
+   var preguntas = jQuery('#quizbook ul li');
+
+   var respuestas = [];
+
+   $.each(preguntas, function(key, value) {
+       var id_preguntas = $(value).attr('data-pregunta');
+
+       var resultado = jQuery('[data-pregunta='+id_preguntas+'] [seleccionada]').prop('id');
+
+       respuestas.push(resultado);
+
+   });
+
+   var datos = {
+       action: 'quizbook_resultados',
+       respuesta: respuestas
+   }
+});
+   </code>
+</pre>
+
+<li>Conectando a WP Ajax</li>
+<pre class="language-js">
+   <code class="language-js">
+// en functions en los scripts
+wp_localize_script( 'quizbookjs', 'admin_url', array(
+    'ajax_url' => admin_url('admin-ajax.php')
+) );
+
+// en el quizbook.js
+
+$.ajax({
+     url: admin_url.ajax_url,
+     type: 'post',
+     data: datos
+}).done(function(respuesta) {
+    console.log(respuesta);
+});
+   </code>
+</pre>
+
+<li>Creando la función para Ajax</li>
+<pre class="language-js">
+   <code class="language-js">
+&lt;?php
+if ( ! defined( 'ABSPATH' ) ) exit;
+
+function quizbook_resultados() {
+
+    $respuesta = array(
+            'respuesta' => $_POST,
+    );
+
+    header("Content-type: application/json");
+    echo json_encode($Respuesta) ;
+    die();
+
+}
+ add_action('wp_ajax_nopriv_quizbook_resultados', 'quizbook_resultados');
+ add_action('wp_ajax_quizbook_resultados', 'quizbook_resultados');
+   </code>
+</pre>
+
+<li>Escribiendo la función para calificar</li>
+<pre class="language-js">
+   <code class="language-js">
+
+ if(isset( $_POST['respuesta'] ) ) {
+     $respuestas = wp_unslash( $_POST['respuesta'] );
+     array();
+ }
+
+ $resultado = 0;
+
+ foreach($respuestas as $respuesta) {
+     $pregunta = explode(':', $respuesta);
+
+     /*
+      * $pregunta[0] = post_id
+      * $pregunta[1] = respuesta usuario
+      */
+     $correcta = get_post_meta($pregunta[0], 'quizbook_correcta');
+
+     /*
+      * $letra_correcta[0] = qb_correcta
+      * $letra_correcta[1] = Respuesta número correcto del backend
+      */
+     $letra_correcta = explode(':', $correcta[0]);
+
+     if($letra_correcta[1] === $pregunta[1]) {
+         $resultado += 10;
+     }
+ }
+ $total_examen = array(
+         'total' => $resultado,
+ );
+
+header("Content-type: application/json");
+echo json_encode($total_examen) ;
+die();
+
+
+   </code>
+</pre>
+
+
+<li>Imprimiendo un Resultado</li>
+<pre class="language-js">
+   <code class="language-js">
+}).done(function(respuesta) {
+    var clase;
+    if(respuesta.total > 60) {
+        clase = 'aprobado';
+    } else {
+        clase = 'noaprobado'
+    }
+    $('#quizbook_resultado').append("Total: "+ respuesta.total).addClass(clase);
+    $('#quizbook_btn_submit').remove();
+});
+
+// en el CSS
+
+.aprobado {
+    border: 2px solid #248c24;
+}
+.noaprobado {
+    border: 2px solid #c20000;
+}
+   </code>
+</pre>
+
+
+<li>Desarrollando la versión Premium, Creando el Plugin.</li>
+<pre class="language-php">
+   <code class="language-php">
+&lt;?php
+/*
+Plugin Name: Quizbook Examenes
+Plugin URI: 
+Description: Añade la posibilidad de crear examenes
+Version: 1.0
+Author: Juan Pablo De la torre Valdez
+Author URI: 
+Text Domain: quizbook
+*/
+   </code>
+</pre>
+
+<li>Revisando que el Plugin Padre Exista.</li>
+<pre class="language-php">
+   <code class="language-php">
+&lt;?php
+function quizbook_examen_revisar() {
+    if(!function_exists( 'quizbook_post_type' ) ) {
+        deactivate_plugins(plugin_basename(__FILE__));
+        
+        add_action( 'admin_notices', 'quizbook_error_activar' );
+    } 
+}
+add_action('admin_init', 'quizbook_examen_revisar');
+
+function quizbook_error_activar() {
+    $class = 'notice notice-error';
+    $message = __( 'Un Error ocurrió! Necesitas Instalar el Plugin Quiz.', 'sample-text-domain' );
+
+    printf( '&lt;div class="%1$s">&lt;p>%2$s&lt;/p>&lt;/div>', esc_attr( $class ), esc_html( $message ) ); 
+}
+    </code>
+</pre>
+
+<li>Creando el Custom Post Type.</li>
+<pre class="language-php">
+   <code class="language-php">
+&lt;?php
+/*
+* Registrar Post Types
+*/
+require_once plugin_dir_path(__FILE__) . 'includes/posttypes.php';
+register_activation_hook(__FILE__, 'quizbook_examenes_rewrite_flush'); 
+
+// en posttypes.php
+&lt;?php
+
+add_action( 'init', 'quizbook_examenes_post_type' );
+
+function quizbook_examenes_post_type() {
+	$labels = array(
+		'name'               => _x( 'Examenes', 'post type general name', '' ),
+		'singular_name'      => _x( 'Examen', 'post type singular name', '' ),
+		'menu_name'          => _x( 'Examenes', 'admin menu', '' ),
+		'name_admin_bar'     => _x( 'Examen', 'add new on admin bar', '' ),
+		'add_new'            => _x( 'Agregar Nuevo', 'book', '' ),
+		'add_new_item'       => __( 'Agregar New Examen', '' ),
+		'new_item'           => __( 'Nuevo Examen', '' ),
+		'edit_item'          => __( 'Editar Examen', '' ),
+		'view_item'          => __( 'Ver Examen', '' ),
+		'all_items'          => __( 'Todos Examenes', '' ),
+		'search_items'       => __( 'Buscar Examenes', '' ),
+		'parent_item_colon'  => __( 'Padre Examenes:', '' ),
+		'not_found'          => __( 'No hay examenes aún.', '' ),
+		'not_found_in_trash' => __( 'No hay examenes en el basurero.', '' )
+	);
+
+	$args = array(
+		'labels'             => $labels,
+        'description'        => __( 'Añade la posibilidad de crear examenes a tus Quizes', '' ),
+		'public'             => true,
+		'publicly_queryable' => true,
+		'show_ui'            => true,
+		'show_in_menu'       => true,
+		'query_var'          => true,
+		'rewrite'            => array( 'slug' => 'examenes' ),
+		'capability_type'    => array('examen', 'examenes'),
+        'menu_position'      => 7,
+        'menu_icon'          => 'dashicons-welcome-write-blog',
+		'has_archive'        => true,
+		'hierarchical'       => false,
+        'supports'           => array( 'title' ),
+        'map_meta_cap'       => true,
+	);
+
+	register_post_type( 'examenes', $args );
+}
+
+/**
+ * Flush rewrite rules on activation.
+ */
+function quizbook_examenes_rewrite_flush() {
+	quizbook_examenes_post_type();
+	flush_rewrite_rules();
+}
+   </code>
+</pre>
+
+<li>Capabilities</li>
+<pre class="language-php">
+   <code class="language-php">
+&lt;?php
+/**
+/**
+    * Añadir los caps
+    */
+function quizbook_examenes_agregar_capabilities() {
+
+    $roles = array( 'administrator', 'editor', 'quizbook' );
+
+    foreach( $roles as $the_role ) {
+        $role = get_role( $the_role );
+        $role->add_cap( 'read' );
+        $role->add_cap( 'edit_examenes' );
+        $role->add_cap( 'publish_examenes' );
+        $role->add_cap( 'edit_published_examenes' );
+                $role->add_cap( 'edit_others_examenes' );
+    }
+
+    $manager_roles = array( 'administrator', 'editor' );
+
+    foreach( $manager_roles as $the_role ) {
+        $role = get_role( $the_role );
+        $role->add_cap( 'read_private_examenes' );
+        $role->add_cap( 'edit_others_examenes' );
+        $role->add_cap( 'edit_private_examenes' );
+        $role->add_cap( 'delete_examenes' );
+        $role->add_cap( 'delete_published_examenes' );
+        $role->add_cap( 'delete_private_examenes' );
+        $role->add_cap( 'delete_others_examenes' );
+    }
+
+}
+
+/**
+    * Remove Task-level capabilities to Administrator, Editor, and Task Logger.
+    */
+function quizbook_examenes_remover_capabilities() {
+
+    $manager_roles = array( 'administrator', 'editor' );
+
+    foreach( $manager_roles as $the_role ) {
+        $role = get_role( $the_role );
+        $role->remove_cap( 'read' );
+        $role->remove_cap( 'edit_examenes' );
+        $role->remove_cap( 'publish_examenes' );
+        $role->remove_cap( 'edit_published_examenes' );
+        $role->remove_cap( 'read_private_examenes' );
+        $role->remove_cap( 'edit_others_examenes' );
+        $role->remove_cap( 'edit_private_examenes' );
+        $role->remove_cap( 'delete_examenes' );
+        $role->remove_cap( 'delete_published_examenes' );
+        $role->remove_cap( 'delete_private_examenes' );
+        $role->remove_cap( 'delete_others_examenes' );
+    }
+
+}
+        
+
+// en el root del plugin.
+/*
+ * Agrega Roles y Permisos a Quizbook Examen
+ */
+ require_once plugin_dir_path( __FILE__ ) . 'includes/roles.php';
+register_activation_hook( __FILE__, 'quizbook_examenes_agregar_capabilities' );
+register_deactivation_hook( __FILE__, 'quizbook_examenes_remover_capabilities' );
+
+    </code>
+</pre>
+
+
+<li>Creando los Metaboxes</li>
+<pre class="language-php">
+   <code class="language-php">
+&lt;?php
+/*
+    * 
+    * Añade los Metaboxes para los Examenes.
+    */
+if ( ! defined( 'ABSPATH' ) ) exit; 
+
+function quizbook_examen_agregar_metaboxes(){
+    // Agrega el Metabox en el Post Type de Quizes
+    
+    add_meta_box( 'quizbook_examen_meta_box', 'Preguntas Examen', 'quizbook_examen_metaboxes', 'examenes', 'normal', 'high', null );
+}
+add_action( 'add_meta_boxes', 'quizbook_examen_agregar_metaboxes' );
+    </code>
+</pre>
+
+
+<li>Descargando Chosen JS y cargando las librerias.</li>
+<pre class="language-php">
+   <code class="language-php">
+&lt;?php
+
+function quizbook_examen_styles($hook) {
+    
+    global $post;
+
+    if ( $hook == 'post-new.php' || $hook == 'post.php' ) {
+        if ( 'examenes' === $post->post_type ) {     
+            wp_enqueue_style('chosen', plugins_url('../assets/css/chosen.css', __FILE__));
+            wp_enqueue_script('chosenjs', plugins_url('../assets/js/chosen.jquery.min.js', __FILE__), array('jquery'), 1.0, true );
+            
+            wp_enqueue_script('quizbook_scripts', plugins_url('../assets/js/scripts.js', __FILE__), array(), 1.0, true );
+        }
+    }
+}   
+add_action('admin_enqueue_scripts', 'quizbook_examen_styles', 10, 1);
+    </code>
+</pre>
+
+<li>Imprimiendo las respuestas con Chosen</li>
+<pre class="language-php">
+   <code class="language-php">
+
+function quizbook_examen_metaboxes($post) {
+    wp_nonce_field(basename(__FILE__), 'quizbook_examen_nonce');
+?>
+&lt;table class="form-table">
+    &lt;tr>
+        &lt;th class="row-title" colspan="2">
+            &lt;h2>Selecciona las respuestas que se incluyen en este examen&lt;/h2>
+        &lt;/th>
+    &lt;/tr>
+    
+    
+    &lt;tr>
+        &lt;th class="row-title">
+            &lt;label>Seleccione de la lista.&lt;/label>
+        &lt;/th>
+        &lt;td>
+                &lt;?php
+                $args = array(
+                        'post_type' => 'quizes',
+                        'posts_per_page' => -1,
+                );
+                $posts = get_posts($args);
+                
+                if($posts):  ?>
+
+                &lt;select data-placeholder="Elige las preguntas" class="chosen-select large-text" multiple tabindex="4" name="quizbook_examen[]">
+                    &lt;option value="">&lt;/option>
+                    &lt;?php foreach($posts as $post): ?>
+                    &lt;option  value="&lt;?php echo $post->ID; ?>">&lt;?php echo $post->post_title; ?>&lt;/option>
+                    &lt;?php endforeach; ?>
+                &lt;/select>
+
+            &lt;?php else:
+                echo "&lt;p>Antes de Comenzar, añade preguntas en Quizes.&lt;/p>";
+            endif; wp_reset_postdata()?>
+        &lt;/td>
+    &lt;/tr> 
+&lt;/table>
+
+&lt;?php
+}
+// en el CSS
+.chosen-container {
+            width:100%!important;
+}
+
+// en scripts.js
+(function($) {
+    $('.chosen-select').chosen(); 
+})(jQuery);
+    </code>
+</pre>
+
+<li>Guardar las preguntas seleccionadas</li>
+<pre class="language-php">
+   <code class="language-php">
+
+function quizbook_examen_guardar_metaboxes($post_id, $post, $update) {
+if(!isset($_POST['quizbook_examen_nonce']) || !wp_verify_nonce( $_POST['quizbook_examen_nonce'], basename(__FILE__)  ) )
+    return $post_id;
+
+if(!current_user_can('edit_post', $post_id))
+    return $post_id;
+
+if(defined("DOING_AUTOSAVE") && DOING_AUTOSAVE)
+    return $post_id;
+
+
+$respuestas = '';
+$arreglo_respuestas = array();
+
+if(isset($_POST['quizbook_examen'])) {
+    $respuestas =  $_POST['quizbook_examen'] ;
+    
+    foreach($respuestas as $respuesta):
+        $arreglo_respuestas[] =  sanitize_text_field($respuesta);
+    endforeach;
+}
+update_post_meta($post_id, 'quizbook_examen', maybe_serialize( $arreglo_respuestas ) );
+}
+
+add_action('save_post', 'quizbook_examen_guardar_metaboxes', 10, 3);
+    </code>
+</pre>
+
+<li>Autollenando los campos</li>
+<pre class="language-php">
+   <code class="language-php">
+&lt;?php $seleccionadas = maybe_unserialize(   get_post_meta($post->ID, 'quizbook_examen', true  ) );   ?>
+&lt;select data-placeholder="Elige las preguntas" class="chosen-select large-text" multiple tabindex="4" name="quizbook_examen[]">
+    &lt;option value="">&lt;/option>
+    &lt;?php foreach($posts as $post): ?>
+    &lt;option &lt;?php echo in_array($post->ID, $seleccionadas  ) ? 'selected' : ''; ?>  value="&lt;?php echo $post->ID; ?>">&lt;?php echo $post->post_title; ?>&lt;/option>
+    &lt;?php endforeach; ?>
+&lt;/select>
+   </code>
+</pre>
+
+<li>Shortcode para los examenes</li>
+<pre class="language-php">
+   <code class="language-php">
+&lt;?php
+
+if ( ! defined( 'ABSPATH' ) ) exit; 
+
+// [quizbook_examen preguntas="" orden="" id=""]
+function quizbook_examen_shortcode( $atts ) {
+    $post_id =  (int) $atts['id'];
+    
+    $preguntas = get_post_meta($post_id, 'quizbook_examen', true );
+    
+    $preguntas_id = maybe_unserialize($preguntas);
+    
+    $args = array(
+        'post_type' => 'quizes',
+        'post__in' => $preguntas_id,
+        'posts_per_page' => $atts['preguntas'],
+        'orderby' =>  $atts['orden']
+    );
+    $quizbook = new WP_Query($args); ?>
+    &lt;form name="quizbook_enviar" id="quizbook_enviar">
+        &lt;div id="quizbook" class="quizbook">
+            &lt;ul>
+            &lt;?php while($quizbook->have_posts()): $quizbook->the_post(); ?>
+                &lt;li data-pregunta="&lt;?php echo get_the_ID(); ?>">
+                    &lt;h3>&lt;?php the_title(); ?>&lt;/h3>
+                    &lt;?php the_content(); ?>
+                    
+                    &lt;?php $opciones = get_post_meta(get_the_ID()  ); 
+
+                            foreach($opciones as $key => $opcion):
+                                $resultado = quizbook_filtrar_preguntas($key);
+                                unset($resultado['qb_correcta']);
+                                $numero = explode('_', $key);
+                                
+                                if($resultado === 0) { ?>
+                                    &lt;div id="&lt;?php echo get_the_ID() . ":" . $numero[2]; ?>" class=" respuesta ">
+                                            &lt;?php echo $opcion[0]; ?>
+                                    &lt;/div>
+                                &lt;?php } 
+                            endforeach;
+                    ?>
+                    
+                    
+                &lt;/li>
+
+            &lt;?php endwhile; ?>
+            &lt;/ul>
+        &lt;/div> &lt;!--#quizbook-->
+        
+        &lt;input type="submit" value="Enviar" id="quizbook_btn_submit">
+        
+        &lt;div id="quizbook_resultado">&lt;/div>
+    &lt;/form>&lt;!--form-->
+    &lt;?php wp_reset_postdata();
+    
+}
+add_shortcode( 'quizbook_examen', 'quizbook_examen_shortcode' );
+    </code>
+</pre>
+
+<li>Imprimiendo el Shortcode en los Examenes</li>
+<pre class="language-php">
+   <code class="language-php">
+&lt;?php
+
+
+// Agregar una nueva columna
+function views_column($defaults) {
+    $defaults['shortcode'] = 'Shortcode';
+    return $defaults;
+}
+add_filter('manage_examenes_posts_columns', 'views_column');
+
+// Valor a Mostrar
+function display_views($column_name) {
+    if($column_name === 'shortcode') {
+        $examen_id = get_the_ID();
+                echo "[quizbook_examen preguntas='' orden='' id='$examen_id']";
+    }
+}
+add_action('manage_examenes_posts_custom_column','display_views',5,2);
+        
+    </code>
+</pre>
+
+</div> <!--.contenedor-->
+        <style>
+        body {
+           font-family: arial, helvetica, sans-serif;
+        }
+        .contenedor {
+           width:1000px;
+           margin: 0 auto;
+        }
+        li {
+           list-style: none;
+           text-align:center;
+        }
+        :not(pre) > code[class*="language-"], pre[class*="language-"] {
+            background-color: black;
+        }
+        code[class*="language-"], pre[class*="language-"] {
+            font-size: 20px;
+        }
+
+        li {
+           font-size: 30px;
+        }
+        </style>
+    <script src="prism.js"></script>
+</body>
+</html>
